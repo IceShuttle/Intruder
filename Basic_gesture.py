@@ -105,7 +105,7 @@ while True:
             check_list.append(0)
 
         if time.time()-start_time>6 and check_list:
-            if sum(check_list)/len(check_list)>0.7:
+            if sum(check_list)/len(check_list)>0.8:
                 print("Welcome")
             else:
                 print("get out")
