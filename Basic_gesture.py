@@ -1,5 +1,6 @@
 import cv2
-import numpy as np
+import time
+import pickle
 import mediapipe as mp
 import math
 import time
@@ -36,7 +37,7 @@ def findError(gestureMatrix,unknownMatrix,keypoints):
     for row in keypoints:
         for column in keypoints:
             error = error + abs(gestureMatrix[row][column]-unknownMatrix[row][column])
-            print(error)
+            # print(error)
     return error
 
 def findGesture(unknownGesture,knownGestures,keypoints,gestnames,tol):
@@ -77,49 +78,44 @@ tol = 15
 
 # (print("How Many gestures do you want ? "))
 # time.sleep(3)
-numGest = int(input("How many Gestures do you want ? "))
-findHands=mpHands(numGest)
-print(numGest)
+findHands=mpHands(1)
 gestNames=[]
 
-for i in range(numGest):
-    prompt = 'Name of gesture #'+str(i+1)+' '
-    name = input(prompt)
-    gestNames.append(name)
-print(gestNames)
-trainCnt=0
-knowngestures= []
+gestNames.append('fist')
 
 # mpHand= mp.solutions.hands
 mpDraw=mp.solutions.drawing_utils
 
 boxcolor=(255,255,0)
 boxthickness=3
+check_list = []
+with open("known.bin",'rb') as f:
+    knowngestures = pickle.load(f)
+
+start_time = time.time()
 while True:
     ignore,  frame = cam.read()
     handData=findHands.Marks(frame)
-    if train ==True:
-        if handData!=None:
-            print("Plese show gesture ",gestNames[trainCnt],'press t when ready')
-            for hand in handData:
-                for ind in keypoints:
-                    cv2.circle(frame,hand[ind],25,(255,0,255),3)
-            if cv2.waitKey(1) & 0xff == ord('t'):
-                kownGesture = findDistance(handData[0])
-                knowngestures.append(kownGesture)
-                trainCnt+=1
-                if trainCnt==numGest:
-                    train = False
+    if handData!=[]:
+        unknownGesture = findDistance(handData[0])
+        myGesture = findGesture(unknownGesture,knowngestures,keypoints,gestNames,tol)
+        if myGesture=="fist":
+            check_list.append(1)
+        else:
+            check_list.append(0)
 
-    if train ==False:
-        if handData!=[]:
-            unknownGesture = findDistance(handData[0])
-            myGesture = findGesture(unknownGesture,knowngestures,keypoints,gestNames,tol)
-            # for hand in handData:
-                # cv2.rectangle(frame,(hand[17][0],hand[20][1]),(hand[1][0]+hand[4][0],hand[1][1]+hand[4][1]),boxcolor,boxthickness)
-                # mpDraw.draw_landmarks(frame, landmark_list = hand,connections = mp.solutions.hands.HAND_CONNECTIONS)
-            # error = findError(kownGesture,unknownGesture,keypoints)
-            cv2.putText(frame,myGesture,(100,175),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,255),3)
+        if time.time()-start_time>6 and check_list:
+            if sum(check_list)/len(check_list)>0.7:
+                print("Welcome")
+            else:
+                print("get out")
+            start_time = time.time()
+            check_list=[]
+        # for hand in handData:
+            # cv2.rectangle(frame,(hand[17][0],hand[20][1]),(hand[1][0]+hand[4][0],hand[1][1]+hand[4][1]),boxcolor,boxthickness)
+            # mpDraw.draw_landmarks(frame, landmark_list = hand,connections = mp.solutions.hands.HAND_CONNECTIONS)
+        # error = findError(kownGesture,unknownGesture,keypoints)
+        cv2.putText(frame,myGesture,(100,175),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,255),3)
     
     cv2.imshow('my WEBcam', frame)
     cv2.moveWindow('my WEBcam',0,0)
